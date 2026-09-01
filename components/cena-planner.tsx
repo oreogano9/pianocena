@@ -338,7 +338,6 @@ export function CenaPlanner() {
       </section>
 
       <footer>
-        <span>Organizzazione scientifica della cena.</span>
         <a href="#inizio">Aggiungi le tue date</a>
       </footer>
     </main>
