@@ -13,7 +13,8 @@ export type AvailabilityResult = {
   shared: boolean;
 };
 
-const STORAGE_KEY = "fissiamo-sta-cena:settembre-2026";
+const LEGACY_STORAGE_KEY = "fissiamo-sta-cena:settembre-2026";
+const STORAGE_KEY = "fissiamo-sta-cena:settembre-2026:v2";
 
 function normalizedName(name: string) {
   return name.trim().normalize("NFKC").toLocaleLowerCase("it-IT");
@@ -35,6 +36,7 @@ function dedupeAvailabilities(entries: Availability[]): Availability[] {
 function loadLocalAvailabilities(): Availability[] {
   if (typeof window === "undefined") return [];
 
+  window.localStorage.removeItem(LEGACY_STORAGE_KEY);
   const value = window.localStorage.getItem(STORAGE_KEY);
   if (!value) return [];
 
@@ -76,14 +78,7 @@ export async function loadAvailabilities(): Promise<AvailabilityResult> {
     if (!response.ok) throw new Error("Archivio condiviso non disponibile.");
 
     const data = (await response.json()) as { answers: Availability[] };
-    let answers = dedupeAvailabilities(data.answers);
-
-    // Porta nel nuovo archivio le eventuali risposte già salvate su questo browser.
-    if (answers.length === 0 && local.length > 0) {
-      for (const entry of local) {
-        answers = await postAvailability(entry);
-      }
-    }
+    const answers = dedupeAvailabilities(data.answers);
 
     cacheAvailabilities(answers);
     return { answers, shared: true };
