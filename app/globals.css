@@ -10,6 +10,9 @@
   --danger: #ff8b7f;
   --success: #c8f7c5;
   --current-day: #ed4b43;
+  --tier-one: rgb(245 245 242 / 1);
+  --tier-two: rgb(245 245 242 / 0.66);
+  --tier-three: rgb(245 245 242 / 0.33);
   --page-padding: clamp(1rem, 4vw, 3.5rem);
 }
 
@@ -441,6 +444,98 @@ a:focus-visible {
   text-align: right;
 }
 
+.overlap-tiers {
+  max-width: 1320px;
+  margin: 0 auto clamp(2.5rem, 5vw, 4.5rem);
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  list-style: none;
+  border-top: 1px solid var(--line-strong);
+  border-left: 1px solid var(--line-strong);
+}
+
+.overlap-tier {
+  min-width: 0;
+  min-height: 8.5rem;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.5rem;
+  border-right: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.overlap-tier.is-tier-1 {
+  background: var(--tier-one);
+  color: var(--background);
+}
+
+.overlap-tier.is-tier-2 {
+  background: var(--tier-two);
+  color: var(--background);
+}
+
+.overlap-tier.is-tier-3 {
+  background: var(--tier-three);
+  color: var(--text);
+}
+
+.overlap-tier-heading,
+.overlap-tier-dates {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.overlap-tier-heading span,
+.overlap-tier-dates > span {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.overlap-tier-heading strong {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.78rem;
+}
+
+.overlap-tier-dates {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.overlap-tier-dates button {
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: clamp(1.5rem, 3vw, 2.4rem);
+  font-weight: 600;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.overlap-tier-dates button:hover,
+.overlap-tier-dates button.is-active {
+  border-bottom-width: 3px;
+}
+
+.overlap-tier-dates button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+}
+
+.overlap-tier-dates > span {
+  margin-left: auto;
+  opacity: 0.72;
+}
+
 .month-results-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.5fr);
@@ -492,22 +587,40 @@ a:focus-visible {
   transition: color 130ms ease, background-color 130ms ease, transform 80ms ease;
 }
 
-.month-map-day:hover:not(.is-best) {
+.month-map-day:hover:not(.is-tier-1):not(.is-tier-2):not(.is-tier-3) {
   background: var(--surface-strong);
 }
 
-.month-map-day.is-active:not(.is-best) {
+.month-map-day.is-active:not(.is-tier-1):not(.is-tier-2):not(.is-tier-3) {
   background: var(--surface-strong);
   box-shadow: inset 0 0 0 2px var(--text);
 }
 
-.month-map-day.is-best {
-  background: var(--text);
+.month-map-day.is-tier-1 {
+  background: var(--tier-one);
   color: var(--background);
 }
 
-.month-map-day.is-best.is-active {
-  box-shadow: inset 0 0 0 3px var(--background);
+.month-map-day.is-tier-2 {
+  background: var(--tier-two);
+  color: var(--background);
+}
+
+.month-map-day.is-tier-3 {
+  background: var(--tier-three);
+  color: var(--text);
+}
+
+.month-map-day.is-tier-1:hover,
+.month-map-day.is-tier-2:hover,
+.month-map-day.is-tier-3:hover {
+  filter: brightness(1.08);
+}
+
+.month-map-day.is-tier-1.is-active,
+.month-map-day.is-tier-2.is-active,
+.month-map-day.is-tier-3.is-active {
+  box-shadow: inset 0 0 0 3px currentColor;
 }
 
 .month-map-day-top {
@@ -528,8 +641,13 @@ a:focus-visible {
   font-size: clamp(0.56rem, 0.8vw, 0.68rem);
 }
 
-.month-map-day.is-best .month-map-day-top span {
+.month-map-day.is-tier-1 .month-map-day-top span,
+.month-map-day.is-tier-2 .month-map-day-top span {
   color: #555552;
+}
+
+.month-map-day.is-tier-3 .month-map-day-top span {
+  color: rgb(245 245 242 / 0.72);
 }
 
 .month-map-names {
@@ -542,8 +660,13 @@ a:focus-visible {
   -webkit-line-clamp: 2;
 }
 
-.month-map-day.is-best .month-map-names {
+.month-map-day.is-tier-1 .month-map-names,
+.month-map-day.is-tier-2 .month-map-names {
   color: #444441;
+}
+
+.month-map-day.is-tier-3 .month-map-names {
+  color: rgb(245 245 242 / 0.72);
 }
 
 .day-detail {
@@ -700,6 +823,14 @@ footer a {
   .results-note {
     margin-top: 1rem;
     text-align: left;
+  }
+
+  .overlap-tiers {
+    grid-template-columns: 1fr;
+  }
+
+  .overlap-tier {
+    min-height: 7rem;
   }
 
   .month-results-grid {

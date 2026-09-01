@@ -76,7 +76,22 @@ export function CenaPlanner() {
     });
   }, [answers]);
 
-  const bestOverlap = Math.max(0, ...monthDays.map((result) => result.available.length));
+  const overlapTiers = useMemo(() => {
+    const topCounts = [...new Set(monthDays.map((result) => result.available.length))]
+      .filter((count) => count > 0)
+      .sort((a, b) => b - a)
+      .slice(0, 3);
+
+    return topCounts.map((count, index) => ({
+      rank: index + 1,
+      count,
+      days: monthDays
+        .filter((result) => result.available.length === count)
+        .map((result) => result.day),
+    }));
+  }, [monthDays]);
+
+  const bestOverlap = overlapTiers[0]?.count ?? 0;
   const bestOverlapDays = monthDays.filter(
     (result) => bestOverlap > 0 && result.available.length === bestOverlap,
   );
@@ -178,7 +193,7 @@ export function CenaPlanner() {
       <section className="intro" id="inizio">
         <div className="intro-copy">
           <p className="eyebrow">Cena di settembre</p>
-          <h1>Quando ci siete?</h1>
+          <h1>Quando ci sei?</h1>
           <p className="intro-text">
             *potrai modificare le date dopo averle fissate
           </p>
@@ -295,8 +310,37 @@ export function CenaPlanner() {
             <span />
           </div>
         ) : (
-          <div className="month-results-grid">
-            <div className="month-map" role="group" aria-label="Disponibilità del gruppo a settembre 2026">
+          <>
+            {overlapTiers.length > 0 && (
+              <ol className="overlap-tiers" aria-label="Classifica delle date con più disponibilità">
+                {overlapTiers.map((tier) => (
+                  <li className={`overlap-tier is-tier-${tier.rank}`} key={tier.count}>
+                    <div className="overlap-tier-heading">
+                      <span>{tier.rank}° posto</span>
+                      <strong>{tier.count}/{answers.length}</strong>
+                    </div>
+                    <div className="overlap-tier-dates">
+                      {tier.days.map((day) => (
+                        <button
+                          type="button"
+                          key={day}
+                          className={activeResultDay === day ? "is-active" : undefined}
+                          aria-label={`Mostra ${dayLabel(day)}, ${tier.count} persone disponibili`}
+                          aria-pressed={activeResultDay === day}
+                          onClick={() => setSelectedResultDay(day)}
+                        >
+                          {day}
+                        </button>
+                      ))}
+                      <span>settembre</span>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+
+            <div className="month-results-grid">
+              <div className="month-map" role="group" aria-label="Disponibilità del gruppo a settembre 2026">
               {WEEKDAYS.map((weekday, index) => (
                 <span className="month-map-weekday" key={`map-${weekday}-${index}`} aria-hidden="true">
                   {weekday}
@@ -307,7 +351,9 @@ export function CenaPlanner() {
               ))}
               {monthDays.map((result) => {
                 const names = result.available.map((person) => person.name);
-                const isBest = bestOverlap > 0 && result.available.length === bestOverlap;
+                const tierRank = overlapTiers.find(
+                  (tier) => tier.count === result.available.length,
+                )?.rank;
                 const isActive = activeResultDay === result.day;
                 const isToday = result.day === CURRENT_DAY;
 
@@ -315,7 +361,7 @@ export function CenaPlanner() {
                   <button
                     type="button"
                     key={result.day}
-                    className={`month-map-day${isBest ? " is-best" : ""}${isActive ? " is-active" : ""}`}
+                    className={`month-map-day${tierRank ? ` is-tier-${tierRank}` : ""}${isActive ? " is-active" : ""}`}
                     aria-label={`${dayLabel(result.day)}${isToday ? ", oggi" : ""}. ${result.available.length} su ${answers.length} disponibili${names.length > 0 ? `: ${names.join(", ")}` : ". Nessuno"}`}
                     aria-pressed={isActive}
                     onClick={() => setSelectedResultDay(result.day)}
@@ -331,25 +377,26 @@ export function CenaPlanner() {
                   </button>
                 );
               })}
-            </div>
+              </div>
 
-            {activeResult && (
-              <aside className="day-detail" aria-live="polite">
-                {bestOverlap > 0 && activeResult.available.length === bestOverlap && (
-                  <p className="best-overlap-label">Migliore sovrapposizione</p>
-                )}
-                <p className="detail-date">{dayLabel(activeResult.day)}</p>
-                <div className="people-group">
-                  <h3>Ci sono</h3>
-                  <p>{activeResult.available.length > 0 ? activeResult.available.map((person) => person.name).join(", ") : "Nessuno"}</p>
-                </div>
-                <div className="people-group is-muted">
-                  <h3>Non ci sono</h3>
-                  <p>{unavailable.length > 0 ? unavailable.map((person) => person.name).join(", ") : "Nessuno"}</p>
-                </div>
-              </aside>
-            )}
-          </div>
+              {activeResult && (
+                <aside className="day-detail" aria-live="polite">
+                  {bestOverlap > 0 && activeResult.available.length === bestOverlap && (
+                    <p className="best-overlap-label">Migliore sovrapposizione</p>
+                  )}
+                  <p className="detail-date">{dayLabel(activeResult.day)}</p>
+                  <div className="people-group">
+                    <h3>Ci sono</h3>
+                    <p>{activeResult.available.length > 0 ? activeResult.available.map((person) => person.name).join(", ") : "Nessuno"}</p>
+                  </div>
+                  <div className="people-group is-muted">
+                    <h3>Non ci sono</h3>
+                    <p>{unavailable.length > 0 ? unavailable.map((person) => person.name).join(", ") : "Nessuno"}</p>
+                  </div>
+                </aside>
+              )}
+            </div>
+          </>
         )}
       </section>
 
