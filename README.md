@@ -6,7 +6,7 @@ Ogni mese usa un archivio separato. Ogni nome corrisponde a una sola risposta ne
 
 ## Anteprima organizzazione
 
-Il piano automatico per una o due cene è visibile solo quando viene scritto `Konrad` nel campo del nome. Per renderlo visibile a tutti, imposta `SHOW_MEETING_PLAN_TO_EVERYONE` su `true` in `components/cena-planner.tsx`.
+Il piano automatico propone due cene e aggiunge una terza data solo quando migliora la copertura del gruppo. È visibile solo quando viene scritto `Konrad` nel campo del nome. Per renderlo visibile a tutti, imposta `SHOW_MEETING_PLAN_TO_EVERYONE` su `true` in `components/cena-planner.tsx`.
 
 ## Avvio locale
 
