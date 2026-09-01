@@ -7,7 +7,7 @@ import type { Availability } from "@/lib/availability-store";
 const YEAR = 2026;
 const MONTH_INDEX = 8;
 const DAYS_IN_MONTH = 30;
-const MIN_ANSWERS_FOR_RANKING = 5;
+const MIN_ANSWERS_FOR_RANKING = 3;
 const ALL_DAYS = Array.from({ length: DAYS_IN_MONTH }, (_, index) => index + 1);
 const WEEKDAYS = ["L", "M", "M", "G", "V", "S", "D"];
 const FIRST_DAY_OFFSET = 1;
