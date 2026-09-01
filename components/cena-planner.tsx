@@ -3,17 +3,16 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { loadAvailabilities, saveAvailability } from "@/lib/availability-store";
 import type { Availability } from "@/lib/availability-store";
+import {
+  daysInMonth,
+  firstDayOffset,
+  parseMonthKey,
+  SUPPORTED_MONTHS,
+  SUPPORTED_YEARS,
+} from "@/lib/months";
 
-const YEAR = 2026;
-const MONTH_INDEX = 8;
-const DAYS_IN_MONTH = 30;
 const MIN_ANSWERS_FOR_RANKING = 3;
-const ALL_DAYS = Array.from({ length: DAYS_IN_MONTH }, (_, index) => index + 1);
 const WEEKDAYS = ["L", "M", "M", "G", "V", "S", "D"];
-const FIRST_DAY_OFFSET = 1;
-const today = new Date();
-const CURRENT_DAY =
-  today.getFullYear() === YEAR && today.getMonth() === MONTH_INDEX ? today.getDate() : null;
 
 const fullDateFormatter = new Intl.DateTimeFormat("it-IT", {
   weekday: "long",
@@ -23,19 +22,30 @@ const fullDateFormatter = new Intl.DateTimeFormat("it-IT", {
 const shortWeekdayFormatter = new Intl.DateTimeFormat("it-IT", {
   weekday: "short",
 });
+const monthNameFormatter = new Intl.DateTimeFormat("it-IT", {
+  month: "long",
+});
+const monthLabelFormatter = new Intl.DateTimeFormat("it-IT", {
+  month: "long",
+  year: "numeric",
+});
 
-function formatDate(day: number) {
-  const date = new Date(YEAR, MONTH_INDEX, day);
+function capitalize(value: string) {
+  return value.replace(/^./, (letter) => letter.toUpperCase());
+}
+
+function formatDate(year: number, monthIndex: number, day: number) {
+  const date = new Date(year, monthIndex, day);
   return fullDateFormatter.format(date);
 }
 
-function dayLabel(day: number) {
-  return formatDate(day).replace(/^./, (letter) => letter.toUpperCase());
+function dayLabel(year: number, monthIndex: number, day: number) {
+  return capitalize(formatDate(year, monthIndex, day));
 }
 
-function shortDayLabel(day: number) {
+function shortDayLabel(year: number, monthIndex: number, day: number) {
   const weekday = shortWeekdayFormatter
-    .format(new Date(YEAR, MONTH_INDEX, day))
+    .format(new Date(year, monthIndex, day))
     .replace(".", "")
     .replace(/^./, (letter) => letter.toUpperCase());
 
@@ -46,8 +56,9 @@ function normalName(name: string) {
   return name.trim().toLocaleLowerCase("it");
 }
 
-export function CenaPlanner() {
+export function CenaPlanner({ initialMonth }: { initialMonth: string }) {
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const [monthKey, setMonthKey] = useState(initialMonth);
   const [answers, setAnswers] = useState<Availability[]>([]);
   const [name, setName] = useState("");
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
@@ -60,21 +71,43 @@ export function CenaPlanner() {
   const [shared, setShared] = useState(true);
   const [editingAnswerId, setEditingAnswerId] = useState<string | null>(null);
 
+  const { year, monthIndex } = parseMonthKey(monthKey);
+  const maximumDay = daysInMonth(monthKey);
+  const allDays = useMemo(
+    () => Array.from({ length: maximumDay }, (_, index) => index + 1),
+    [maximumDay],
+  );
+  const calendarOffset = firstDayOffset(monthKey);
+  const monthDate = new Date(year, monthIndex, 1);
+  const monthName = monthNameFormatter.format(monthDate);
+  const monthLabel = capitalize(monthLabelFormatter.format(monthDate));
+  const today = new Date();
+  const currentDay =
+    today.getFullYear() === year && today.getMonth() === monthIndex
+      ? today.getDate()
+      : null;
+
   useEffect(() => {
+    let cancelled = false;
     const timer = window.setTimeout(async () => {
       try {
-        const result = await loadAvailabilities();
+        const result = await loadAvailabilities(monthKey);
+        if (cancelled) return;
         setAnswers(result.answers);
         setShared(result.shared);
       } catch (loadError) {
+        if (cancelled) return;
         setError(loadError instanceof Error ? loadError.message : "Qualcosa è andato storto.");
       } finally {
-        setReady(true);
+        if (!cancelled) setReady(true);
       }
     }, 0);
 
-    return () => window.clearTimeout(timer);
-  }, []);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [monthKey]);
 
   const existingAnswer = useMemo(
     () => answers.find((answer) => normalName(answer.name) === normalName(name)),
@@ -86,14 +119,14 @@ export function CenaPlanner() {
   const hasNameConflict = Boolean(existingAnswer && !isEditingExisting);
 
   const monthDays = useMemo(() => {
-    return ALL_DAYS.map((day) => {
+    return allDays.map((day) => {
       const available = answers.filter(
         (answer) => answer.alwaysFree || answer.dates.includes(day),
       );
 
       return { day, available };
     });
-  }, [answers]);
+  }, [allDays, answers]);
 
   const rankingReady = answers.length >= MIN_ANSWERS_FOR_RANKING;
   const overlapTiers = useMemo(() => {
@@ -145,11 +178,25 @@ export function CenaPlanner() {
     setEditingAnswerId(null);
   }
 
+  function handleMonthChange(nextMonth: string) {
+    setMonthKey(nextMonth);
+    setAnswers([]);
+    setName("");
+    setSelectedDays([]);
+    setAlwaysFree(false);
+    setSelectedResultDay(null);
+    setNotice(null);
+    setError(null);
+    setEditingAnswerId(null);
+    setShared(true);
+    setReady(false);
+  }
+
   function editExistingAnswer() {
     if (!existingAnswer) return;
 
     setEditingAnswerId(existingAnswer.id);
-    setSelectedDays(existingAnswer.alwaysFree ? ALL_DAYS : existingAnswer.dates);
+    setSelectedDays(existingAnswer.alwaysFree ? allDays : existingAnswer.dates);
     setAlwaysFree(existingAnswer.alwaysFree);
     setError(null);
     setNotice("Risposta aperta. Ora puoi modificare le date.");
@@ -181,7 +228,7 @@ export function CenaPlanner() {
     setError(null);
     setAlwaysFree((current) => {
       const next = !current;
-      setSelectedDays(next ? ALL_DAYS : []);
+      setSelectedDays(next ? allDays : []);
       return next;
     });
   }
@@ -210,11 +257,15 @@ export function CenaPlanner() {
     try {
       const wasEditing = isEditingExisting;
       setSaving(true);
-      const result = await saveAvailability(answers, {
-        name: cleanName,
-        dates: alwaysFree ? ALL_DAYS : selectedDays,
-        alwaysFree,
-      });
+      const result = await saveAvailability(
+        answers,
+        {
+          name: cleanName,
+          dates: alwaysFree ? allDays : selectedDays,
+          alwaysFree,
+        },
+        monthKey,
+      );
       setAnswers(result.answers);
       setShared(result.shared);
       const savedAnswer = result.answers.find(
@@ -242,7 +293,7 @@ export function CenaPlanner() {
 
       <section className="intro" id="inizio">
         <div className="intro-copy">
-          <p className="eyebrow">Cena di settembre</p>
+          <p className="eyebrow">Cena di {monthName}</p>
           <h1>Quando ci sei?</h1>
           <p className="intro-text">
             *potrai modificare le date dopo averle fissate
@@ -251,6 +302,31 @@ export function CenaPlanner() {
 
         <div className="form-shell">
           <form onSubmit={handleSubmit} noValidate>
+            <div className="month-picker">
+              <label htmlFor="month">Mese della cena</label>
+              <select
+                id="month"
+                name="month"
+                value={monthKey}
+                disabled={saving}
+                onChange={(event) => handleMonthChange(event.target.value)}
+              >
+                {SUPPORTED_YEARS.map((supportedYear) => (
+                  <optgroup label={String(supportedYear)} key={supportedYear}>
+                    {SUPPORTED_MONTHS.filter(
+                      (month) => month.year === supportedYear,
+                    ).map((month) => (
+                      <option value={month.key} key={month.key}>
+                        {capitalize(monthLabelFormatter.format(
+                          new Date(month.year, month.monthIndex, 1),
+                        ))}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+
             <div className="field-group">
               <label htmlFor="name">Come ti chiami?</label>
               <input
@@ -290,31 +366,31 @@ export function CenaPlanner() {
             >
               <legend>Quando sei libero?</legend>
               <div className="month-heading">
-                <span>Settembre 2026</span>
+                <span>{monthLabel}</span>
                 <span>{selectedDays.length} sere</span>
               </div>
 
-              <div className="calendar" role="group" aria-label="Sere disponibili a settembre 2026">
+              <div className="calendar" role="group" aria-label={`Sere disponibili a ${monthName} ${year}`}>
                 {WEEKDAYS.map((weekday, index) => (
                   <span className="weekday" key={`${weekday}-${index}`} aria-hidden="true">
                     {weekday}
                   </span>
                 ))}
-                {Array.from({ length: FIRST_DAY_OFFSET }, (_, index) => (
+                {Array.from({ length: calendarOffset }, (_, index) => (
                   <span className="calendar-spacer" key={`spacer-${index}`} aria-hidden="true" />
                 ))}
-                {ALL_DAYS.map((day) => {
+                {allDays.map((day) => {
                   const selected = selectedDays.includes(day);
-                  const date = new Date(YEAR, MONTH_INDEX, day);
+                  const date = new Date(year, monthIndex, day);
                   const weekend = date.getDay() === 0 || date.getDay() === 6;
-                  const isToday = day === CURRENT_DAY;
+                  const isToday = day === currentDay;
 
                   return (
                     <button
                       className={`day-button${selected ? " is-selected" : ""}${weekend ? " is-weekend" : ""}`}
                       type="button"
                       key={day}
-                      aria-label={`${dayLabel(day)}${isToday ? ", oggi" : ""}`}
+                      aria-label={`${dayLabel(year, monthIndex, day)}${isToday ? ", oggi" : ""}`}
                       aria-pressed={selected}
                       onClick={() => toggleDay(day)}
                     >
@@ -406,14 +482,14 @@ export function CenaPlanner() {
                           type="button"
                           key={day}
                           className={activeResultDay === day ? "is-active" : undefined}
-                          aria-label={`Mostra ${dayLabel(day)}, ${tier.count} persone disponibili`}
+                          aria-label={`Mostra ${dayLabel(year, monthIndex, day)}, ${tier.count} persone disponibili`}
                           aria-pressed={activeResultDay === day}
                           onClick={() => setSelectedResultDay(day)}
                         >
-                          {shortDayLabel(day)}{index < tier.days.length - 1 ? "," : ""}
+                          {shortDayLabel(year, monthIndex, day)}{index < tier.days.length - 1 ? "," : ""}
                         </button>
                       ))}
-                      <span>settembre</span>
+                      <span>{monthName}</span>
                     </div>
                   </li>
                 ))}
@@ -421,13 +497,13 @@ export function CenaPlanner() {
             )}
 
             <div className="month-results-grid">
-              <div className="month-map" role="group" aria-label="Disponibilità del gruppo a settembre 2026">
+              <div className="month-map" role="group" aria-label={`Disponibilità del gruppo a ${monthName} ${year}`}>
               {WEEKDAYS.map((weekday, index) => (
                 <span className="month-map-weekday" key={`map-${weekday}-${index}`} aria-hidden="true">
                   {weekday}
                 </span>
               ))}
-              {Array.from({ length: FIRST_DAY_OFFSET }, (_, index) => (
+              {Array.from({ length: calendarOffset }, (_, index) => (
                 <span className="month-map-spacer" key={`map-spacer-${index}`} aria-hidden="true" />
               ))}
               {monthDays.map((result) => {
@@ -436,14 +512,14 @@ export function CenaPlanner() {
                   (tier) => tier.count === result.available.length,
                 )?.rank;
                 const isActive = activeResultDay === result.day;
-                const isToday = result.day === CURRENT_DAY;
+                const isToday = result.day === currentDay;
 
                 return (
                   <button
                     type="button"
                     key={result.day}
                     className={`month-map-day${tierRank ? ` is-tier-${tierRank}` : ""}${isActive ? " is-active" : ""}`}
-                    aria-label={`${dayLabel(result.day)}${isToday ? ", oggi" : ""}. ${result.available.length} su ${answers.length} disponibili${names.length > 0 ? `: ${names.join(", ")}` : ". Nessuno"}`}
+                    aria-label={`${dayLabel(year, monthIndex, result.day)}${isToday ? ", oggi" : ""}. ${result.available.length} su ${answers.length} disponibili${names.length > 0 ? `: ${names.join(", ")}` : ". Nessuno"}`}
                     aria-pressed={isActive}
                     onClick={() => setSelectedResultDay(result.day)}
                   >
@@ -465,7 +541,7 @@ export function CenaPlanner() {
                   {bestOverlap > 0 && activeResult.available.length === bestOverlap && (
                     <p className="best-overlap-label">Migliore sovrapposizione</p>
                   )}
-                  <p className="detail-date">{dayLabel(activeResult.day)}</p>
+                  <p className="detail-date">{dayLabel(year, monthIndex, activeResult.day)}</p>
                   <div className="people-group">
                     <h3>Ci sono</h3>
                     <p>{activeResult.available.length > 0 ? activeResult.available.map((person) => person.name).join(", ") : "Nessuno"}</p>

@@ -33,7 +33,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -146,6 +147,46 @@ h1 {
 
 form {
   padding-top: 2rem;
+}
+
+.month-picker {
+  margin-bottom: 2.25rem;
+  padding-bottom: 2rem;
+  display: grid;
+  grid-template-columns: minmax(140px, 0.45fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: end;
+  border-bottom: 1px solid var(--line);
+}
+
+.month-picker label {
+  padding-bottom: 0.95rem;
+}
+
+.month-picker select {
+  width: 100%;
+  height: 3.5rem;
+  padding: 0 0.9rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  outline: none;
+  background: var(--background);
+  color: var(--text);
+  color-scheme: dark;
+  cursor: pointer;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.82rem;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.month-picker select:focus-visible {
+  border-color: var(--text);
+  background: var(--surface);
+}
+
+.month-picker select:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .field-group {
@@ -874,6 +915,15 @@ footer a {
 
   .form-footer {
     grid-template-columns: 1fr;
+  }
+
+  .month-picker {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .month-picker label {
+    padding-bottom: 0;
   }
 
   .name-conflict-actions {
