@@ -9,6 +9,7 @@
   --line-strong: #50504d;
   --danger: #ff8b7f;
   --success: #c8f7c5;
+  --current-day: #ed4b43;
   --page-padding: clamp(1rem, 4vw, 3.5rem);
 }
 
@@ -282,6 +283,16 @@ a:focus-visible {
   color: var(--background);
 }
 
+.current-day-dot {
+  position: absolute;
+  top: 0.42rem;
+  right: 0.42rem;
+  width: 0.38rem;
+  height: 0.38rem;
+  border-radius: 999px;
+  background: var(--current-day);
+}
+
 .always-button {
   width: 100%;
   margin-top: 1.25rem;
@@ -463,6 +474,7 @@ a:focus-visible {
 }
 
 .month-map-day {
+  position: relative;
   min-width: 0;
   padding: clamp(0.5rem, 1vw, 0.85rem);
   display: flex;

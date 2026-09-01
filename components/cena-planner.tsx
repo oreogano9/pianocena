@@ -13,6 +13,9 @@ const DAYS_IN_MONTH = 30;
 const ALL_DAYS = Array.from({ length: DAYS_IN_MONTH }, (_, index) => index + 1);
 const WEEKDAYS = ["L", "M", "M", "G", "V", "S", "D"];
 const FIRST_DAY_OFFSET = 1;
+const today = new Date();
+const CURRENT_DAY =
+  today.getFullYear() === YEAR && today.getMonth() === MONTH_INDEX ? today.getDate() : null;
 
 const fullDateFormatter = new Intl.DateTimeFormat("it-IT", {
   weekday: "long",
@@ -216,17 +219,19 @@ export function CenaPlanner() {
                   const selected = selectedDays.includes(day);
                   const date = new Date(YEAR, MONTH_INDEX, day);
                   const weekend = date.getDay() === 0 || date.getDay() === 6;
+                  const isToday = day === CURRENT_DAY;
 
                   return (
                     <button
                       className={`day-button${selected ? " is-selected" : ""}${weekend ? " is-weekend" : ""}`}
                       type="button"
                       key={day}
-                      aria-label={dayLabel(day)}
+                      aria-label={`${dayLabel(day)}${isToday ? ", oggi" : ""}`}
                       aria-pressed={selected}
                       onClick={() => toggleDay(day)}
                     >
                       {day}
+                      {isToday && <span className="current-day-dot" aria-hidden="true" />}
                     </button>
                   );
                 })}
@@ -295,13 +300,14 @@ export function CenaPlanner() {
                 const names = result.available.map((person) => person.name);
                 const isBest = bestOverlap > 0 && result.available.length === bestOverlap;
                 const isActive = activeResultDay === result.day;
+                const isToday = result.day === CURRENT_DAY;
 
                 return (
                   <button
                     type="button"
                     key={result.day}
                     className={`month-map-day${isBest ? " is-best" : ""}${isActive ? " is-active" : ""}`}
-                    aria-label={`${dayLabel(result.day)}. ${result.available.length} su ${answers.length} disponibili${names.length > 0 ? `: ${names.join(", ")}` : ". Nessuno"}`}
+                    aria-label={`${dayLabel(result.day)}${isToday ? ", oggi" : ""}. ${result.available.length} su ${answers.length} disponibili${names.length > 0 ? `: ${names.join(", ")}` : ". Nessuno"}`}
                     aria-pressed={isActive}
                     onClick={() => setSelectedResultDay(result.day)}
                   >
@@ -312,6 +318,7 @@ export function CenaPlanner() {
                     <span className="month-map-names">
                       {names.length > 0 ? names.join(", ") : "Nessuno"}
                     </span>
+                    {isToday && <span className="current-day-dot" aria-hidden="true" />}
                   </button>
                 );
               })}
