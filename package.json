@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "seed:dummy": "node scripts/seed-dummy-data.mjs"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",

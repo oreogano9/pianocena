@@ -22,4 +22,17 @@ npm run build
 
 ## Persistenza
 
-La versione attuale salva le risposte in `localStorage`, quindi i dati restano sul dispositivo in uso. Il modulo `lib/availability-store.ts` mantiene la persistenza separata dall'interfaccia e potrà essere sostituito con API server e Vercel Blob.
+Le risposte vengono salvate in uno store privato Vercel Blob tramite la route server
+`/api/availability`. Il token di accesso resta sul server. Una cache locale permette
+all'interfaccia di continuare a funzionare durante lo sviluppo senza credenziali Blob.
+
+## Dati fittizi
+
+Per caricare o ripristinare i 20 profili usati per controllare l'interfaccia:
+
+```bash
+npm run seed:dummy -- https://cenabhs.vercel.app
+```
+
+Lo script usa nomi stabili: eseguirlo di nuovo aggiorna gli stessi profili senza
+creare duplicati.
