@@ -645,6 +645,26 @@ a:focus-visible {
   margin: 0;
 }
 
+.group-podium .overlap-tier {
+  min-height: 13rem;
+}
+
+.group-podium-people {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  opacity: 0.78;
+}
+
+.group-podium-people span {
+  margin-bottom: 0.35rem;
+  display: block;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
 .meeting-plan-summary {
   margin-top: 1.5rem;
   padding-top: 1.25rem;

@@ -90,6 +90,28 @@ function rankDays(answers: Availability[], days: number[]) {
   }));
 }
 
+function rankGroupDays(
+  groupAnswers: Availability[],
+  allAnswers: Availability[],
+  days: number[],
+) {
+  return days
+    .map((day) => ({
+      day,
+      groupCount: groupAnswers.filter((answer) => isAvailableOn(answer, day)).length,
+      available: allAnswers.filter((answer) => isAvailableOn(answer, day)),
+    }))
+    .filter((result) => result.groupCount > 0)
+    .sort(
+      (first, second) =>
+        second.groupCount - first.groupCount ||
+        second.available.length - first.available.length ||
+        first.day - second.day,
+    )
+    .slice(0, 3)
+    .map((result, index) => ({ ...result, rank: index + 1 }));
+}
+
 function isAvailableOn(answer: Availability, day: number) {
   return answer.alwaysFree || answer.dates.includes(day);
 }
@@ -287,9 +309,9 @@ export function CenaPlanner({ initialMonth }: { initialMonth: string }) {
     () =>
       meetingPlan?.groups.map((group) => ({
         ...group,
-        tiers: rankDays(group.members, allDays),
+        positions: rankGroupDays(group.members, answers, allDays),
       })) ?? [],
-    [allDays, meetingPlan],
+    [allDays, answers, meetingPlan],
   );
   const recommendedDayIndexes = new Map(
     meetingPlan?.groups.map((group, index) => [group.day, index + 1]) ?? [],
@@ -646,29 +668,34 @@ export function CenaPlanner({ initialMonth }: { initialMonth: string }) {
                         className="overlap-tiers group-podium"
                         aria-label={`Classifica delle date per la cena ${String.fromCharCode(65 + groupIndex)}`}
                       >
-                        {group.tiers.map((tier) => (
-                          <li className={`overlap-tier is-tier-${tier.rank}`} key={tier.count}>
-                            <div className="overlap-tier-heading">
-                              <span>{tier.rank}° posto</span>
-                              <strong>{tier.count}/{group.members.length}</strong>
-                            </div>
-                            <div className="overlap-tier-dates">
-                              {tier.days.map((day, dayIndex) => (
+                        {group.positions.map((position) => {
+                          const names = position.available.map((person) => person.name);
+
+                          return (
+                            <li className={`overlap-tier is-tier-${position.rank}`} key={position.day}>
+                              <div className="overlap-tier-heading">
+                                <span>{position.rank}° posto</span>
+                                <strong>{position.available.length}/{answers.length}</strong>
+                              </div>
+                              <div className="overlap-tier-dates">
                                 <button
                                   type="button"
-                                  key={day}
-                                  className={activeResultDay === day ? "is-active" : undefined}
-                                  aria-label={`Mostra ${dayLabel(year, monthIndex, day)}, ${tier.count} persone della cena ${String.fromCharCode(65 + groupIndex)} disponibili`}
-                                  aria-pressed={activeResultDay === day}
-                                  onClick={() => setSelectedResultDay(day)}
+                                  className={activeResultDay === position.day ? "is-active" : undefined}
+                                  aria-label={`Mostra ${dayLabel(year, monthIndex, position.day)}, ${position.available.length} persone disponibili: ${names.join(", ")}`}
+                                  aria-pressed={activeResultDay === position.day}
+                                  onClick={() => setSelectedResultDay(position.day)}
                                 >
-                                  {shortDayLabel(year, monthIndex, day)}{dayIndex < tier.days.length - 1 ? "," : ""}
+                                  {shortDayLabel(year, monthIndex, position.day)}
                                 </button>
-                              ))}
-                              <span>{monthName}</span>
-                            </div>
-                          </li>
-                        ))}
+                                <span>{monthName}</span>
+                              </div>
+                              <p className="group-podium-people">
+                                <span>{position.groupCount}/{group.members.length} del gruppo</span>
+                                {names.join(", ")}
+                              </p>
+                            </li>
+                          );
+                        })}
                       </ol>
                     </section>
                   ))}
