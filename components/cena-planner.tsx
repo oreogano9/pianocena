@@ -71,6 +71,25 @@ function normalName(name: string) {
   return name.trim().toLocaleLowerCase("it");
 }
 
+function rankDays(answers: Availability[], days: number[]) {
+  const dayCounts = days.map((day) => ({
+    day,
+    count: answers.filter((answer) => isAvailableOn(answer, day)).length,
+  }));
+  const topCounts = [...new Set(dayCounts.map((result) => result.count))]
+    .filter((count) => count > 0)
+    .sort((first, second) => second - first)
+    .slice(0, 3);
+
+  return topCounts.map((count, index) => ({
+    rank: index + 1,
+    count,
+    days: dayCounts
+      .filter((result) => result.count === count)
+      .map((result) => result.day),
+  }));
+}
+
 function isAvailableOn(answer: Availability, day: number) {
   return answer.alwaysFree || answer.dates.includes(day);
 }
@@ -253,20 +272,8 @@ export function CenaPlanner({ initialMonth }: { initialMonth: string }) {
   const rankingReady = answers.length >= MIN_ANSWERS_FOR_RANKING;
   const overlapTiers = useMemo(() => {
     if (!rankingReady) return [];
-
-    const topCounts = [...new Set(monthDays.map((result) => result.available.length))]
-      .filter((count) => count > 0)
-      .sort((a, b) => b - a)
-      .slice(0, 3);
-
-    return topCounts.map((count, index) => ({
-      rank: index + 1,
-      count,
-      days: monthDays
-        .filter((result) => result.available.length === count)
-        .map((result) => result.day),
-    }));
-  }, [monthDays, rankingReady]);
+    return rankDays(answers, allDays);
+  }, [allDays, answers, rankingReady]);
 
   const bestOverlap = overlapTiers[0]?.count ?? 0;
   const meetingPlan = useMemo(
@@ -276,6 +283,14 @@ export function CenaPlanner({ initialMonth }: { initialMonth: string }) {
   const meetingPlanVisible =
     SHOW_MEETING_PLAN_TO_EVERYONE ||
     normalName(name) === normalName(MEETING_PLAN_PREVIEW_NAME);
+  const meetingGroupRankings = useMemo(
+    () =>
+      meetingPlan?.groups.map((group) => ({
+        ...group,
+        tiers: rankDays(group.members, allDays),
+      })) ?? [],
+    [allDays, meetingPlan],
+  );
   const recommendedDayIndexes = new Map(
     meetingPlan?.groups.map((group, index) => [group.day, index + 1]) ?? [],
   );
@@ -616,27 +631,46 @@ export function CenaPlanner({ initialMonth }: { initialMonth: string }) {
                   <strong>{meetingPlan.coveredCount}/{answers.length}</strong>
                 </div>
 
-                <div className={`meeting-podiums is-${meetingPlan.groups.length}`}>
-                  {meetingPlan.groups.map((group, index) => (
-                    <button
-                      type="button"
-                      className="meeting-podium"
-                      key={group.day}
-                      aria-label={`Mostra la cena ${String.fromCharCode(65 + index)}, ${dayLabel(year, monthIndex, group.day)}, ${group.members.length} persone`}
-                      onClick={() => setSelectedResultDay(group.day)}
-                    >
-                      <span className="meeting-podium-top">
-                        <span>Cena {String.fromCharCode(65 + index)}</span>
-                        <strong>{group.members.length}/{answers.length}</strong>
-                      </span>
-                      <span className="meeting-podium-date">
-                        <span>{capitalize(shortWeekdayFormatter.format(new Date(year, monthIndex, group.day)).replace(".", ""))}</span>
-                        <strong>{group.day}</strong>
-                      </span>
-                      <span className="meeting-podium-names">
-                        {group.members.map((person) => person.name).join(", ")}
-                      </span>
-                    </button>
+                <div className="meeting-group-rankings">
+                  {meetingGroupRankings.map((group, groupIndex) => (
+                    <section className="meeting-group-ranking" key={group.day}>
+                      <div className="meeting-group-heading">
+                        <div>
+                          <h4>Cena {String.fromCharCode(65 + groupIndex)}</h4>
+                          <p>{group.members.map((person) => person.name).join(", ")}</p>
+                        </div>
+                        <strong>{group.members.length} persone</strong>
+                      </div>
+
+                      <ol
+                        className="overlap-tiers group-podium"
+                        aria-label={`Classifica delle date per la cena ${String.fromCharCode(65 + groupIndex)}`}
+                      >
+                        {group.tiers.map((tier) => (
+                          <li className={`overlap-tier is-tier-${tier.rank}`} key={tier.count}>
+                            <div className="overlap-tier-heading">
+                              <span>{tier.rank}° posto</span>
+                              <strong>{tier.count}/{group.members.length}</strong>
+                            </div>
+                            <div className="overlap-tier-dates">
+                              {tier.days.map((day, dayIndex) => (
+                                <button
+                                  type="button"
+                                  key={day}
+                                  className={activeResultDay === day ? "is-active" : undefined}
+                                  aria-label={`Mostra ${dayLabel(year, monthIndex, day)}, ${tier.count} persone della cena ${String.fromCharCode(65 + groupIndex)} disponibili`}
+                                  aria-pressed={activeResultDay === day}
+                                  onClick={() => setSelectedResultDay(day)}
+                                >
+                                  {shortDayLabel(year, monthIndex, day)}{dayIndex < tier.days.length - 1 ? "," : ""}
+                                </button>
+                              ))}
+                              <span>{monthName}</span>
+                            </div>
+                          </li>
+                        ))}
+                      </ol>
+                    </section>
                   ))}
                 </div>
 

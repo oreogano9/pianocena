@@ -596,96 +596,53 @@ a:focus-visible {
   font-size: clamp(1.15rem, 2vw, 1.6rem);
 }
 
-.meeting-podiums {
+.meeting-group-rankings {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
+  gap: clamp(2.5rem, 5vw, 4.5rem);
 }
 
-.meeting-podiums.is-1 {
-  grid-template-columns: 1fr;
-}
-
-.meeting-podiums.is-3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.meeting-podium {
+.meeting-group-ranking {
   min-width: 0;
-  min-height: 18rem;
-  padding: clamp(1rem, 2vw, 1.5rem);
+}
+
+.meeting-group-heading {
+  margin-bottom: 1rem;
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 1.25rem;
-  border: 1px solid var(--line-strong);
-  cursor: pointer;
-  text-align: left;
-  transition: filter 130ms ease, transform 80ms ease;
-}
-
-.meeting-podium:nth-child(1) {
-  background: var(--tier-one);
-  color: var(--background);
-}
-
-.meeting-podium:nth-child(2) {
-  background: var(--tier-two);
-  color: var(--background);
-}
-
-.meeting-podium:nth-child(3) {
-  background: var(--tier-three);
-  color: var(--text);
-}
-
-.meeting-podium:hover {
-  filter: brightness(1.08);
-}
-
-.meeting-podium:active {
-  transform: translateY(1px);
-}
-
-.meeting-podium:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: -5px;
-}
-
-.meeting-podium-top {
-  display: flex;
-  align-items: baseline;
+  align-items: end;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 2rem;
+}
+
+.meeting-group-heading h4,
+.meeting-group-heading p {
+  margin: 0;
+}
+
+.meeting-group-heading h4 {
+  font-size: clamp(1.35rem, 2.5vw, 2rem);
+  font-weight: 590;
+  letter-spacing: -0.045em;
+}
+
+.meeting-group-heading p {
+  max-width: 75ch;
+  margin-top: 0.45rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.meeting-group-heading > strong {
+  flex: 0 0 auto;
   font-family: var(--font-geist-mono), monospace;
-  font-size: 0.68rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 550;
+  white-space: nowrap;
 }
 
-.meeting-podium-date {
-  display: grid;
-  align-content: start;
-  line-height: 0.82;
-}
-
-.meeting-podium-date span {
-  font-size: clamp(1.4rem, 2.5vw, 2.2rem);
-  font-weight: 580;
-  letter-spacing: -0.05em;
-}
-
-.meeting-podium-date strong {
-  font-size: clamp(5rem, 9vw, 8rem);
-  font-weight: 610;
-  letter-spacing: -0.085em;
-}
-
-.meeting-podium-names {
-  margin-top: auto;
-  font-size: 0.82rem;
-  line-height: 1.5;
-  opacity: 0.72;
+.overlap-tiers.group-podium {
+  max-width: none;
+  margin: 0;
 }
 
 .meeting-plan-summary {
@@ -1145,14 +1102,12 @@ footer a {
     align-items: start;
   }
 
-  .meeting-podiums,
-  .meeting-podiums.is-3,
   .meeting-plan-summary {
     grid-template-columns: 1fr;
   }
 
-  .meeting-podium {
-    min-height: 15rem;
+  .meeting-group-heading {
+    align-items: start;
   }
 
   .overlap-tier {
