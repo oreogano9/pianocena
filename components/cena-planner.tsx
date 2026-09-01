@@ -172,7 +172,7 @@ export function CenaPlanner() {
           <p className="eyebrow">Cena di settembre</p>
           <h1>Quando ci siete?</h1>
           <p className="intro-text">
-            Segna le sere libere. Noi contiamo, voi smettete di intasare il gruppo.
+            *potrai modificare le date dopo averle fissate
           </p>
         </div>
 
