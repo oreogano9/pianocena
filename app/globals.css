@@ -182,6 +182,64 @@ input:focus-visible {
   background: var(--surface);
 }
 
+.name-conflict {
+  padding: 1rem;
+  border: 1px solid var(--text);
+  background: var(--surface);
+}
+
+.name-conflict > strong {
+  display: block;
+  font-size: 0.92rem;
+}
+
+.name-conflict p {
+  max-width: 48ch;
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.name-conflict-actions {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.name-conflict-actions button {
+  min-height: 2.75rem;
+  padding: 0 0.9rem;
+  border: 1px solid var(--text);
+  border-radius: 0;
+  background: var(--text);
+  color: var(--background);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.name-conflict-actions button:last-child {
+  background: transparent;
+  color: var(--text);
+}
+
+.name-conflict-actions button:hover {
+  background: transparent;
+  color: var(--text);
+}
+
+.name-conflict-actions button:last-child:hover {
+  background: var(--text);
+  color: var(--background);
+}
+
+.name-conflict-actions button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+
 .editing-note {
   margin-bottom: 0;
   padding-left: 0.8rem;
@@ -200,6 +258,16 @@ input:focus-visible {
   margin: 3rem 0 0;
   padding: 0;
   border: 0;
+}
+
+.calendar-fieldset.is-locked,
+.always-button:disabled {
+  opacity: 0.38;
+}
+
+.calendar-fieldset.is-locked .day-button,
+.always-button:disabled {
+  cursor: not-allowed;
 }
 
 .calendar-fieldset legend {
@@ -282,7 +350,7 @@ a:focus-visible {
 }
 
 .submit-button:disabled {
-  cursor: wait;
+  cursor: not-allowed;
   opacity: 0.65;
 }
 
@@ -806,6 +874,10 @@ footer a {
 
   .form-footer {
     grid-template-columns: 1fr;
+  }
+
+  .name-conflict-actions {
+    display: grid;
   }
 
   .submit-button {

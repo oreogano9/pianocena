@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { loadAvailabilities, saveAvailability } from "@/lib/availability-store";
 import type { Availability } from "@/lib/availability-store";
 
@@ -19,6 +19,9 @@ const fullDateFormatter = new Intl.DateTimeFormat("it-IT", {
   day: "numeric",
   month: "long",
 });
+const shortWeekdayFormatter = new Intl.DateTimeFormat("it-IT", {
+  weekday: "short",
+});
 
 function formatDate(day: number) {
   const date = new Date(YEAR, MONTH_INDEX, day);
@@ -29,11 +32,21 @@ function dayLabel(day: number) {
   return formatDate(day).replace(/^./, (letter) => letter.toUpperCase());
 }
 
+function shortDayLabel(day: number) {
+  const weekday = shortWeekdayFormatter
+    .format(new Date(YEAR, MONTH_INDEX, day))
+    .replace(".", "")
+    .replace(/^./, (letter) => letter.toUpperCase());
+
+  return `${weekday} ${day}`;
+}
+
 function normalName(name: string) {
   return name.trim().toLocaleLowerCase("it");
 }
 
 export function CenaPlanner() {
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const [answers, setAnswers] = useState<Availability[]>([]);
   const [name, setName] = useState("");
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
@@ -44,6 +57,7 @@ export function CenaPlanner() {
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
   const [shared, setShared] = useState(true);
+  const [editingAnswerId, setEditingAnswerId] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(async () => {
@@ -65,6 +79,10 @@ export function CenaPlanner() {
     () => answers.find((answer) => normalName(answer.name) === normalName(name)),
     [answers, name],
   );
+  const isEditingExisting = Boolean(
+    existingAnswer && existingAnswer.id === editingAnswerId,
+  );
+  const hasNameConflict = Boolean(existingAnswer && !isEditingExisting);
 
   const monthDays = useMemo(() => {
     return ALL_DAYS.map((day) => {
@@ -102,27 +120,45 @@ export function CenaPlanner() {
     : [];
 
   function handleNameChange(nextName: string) {
-    const previousAnswer = existingAnswer;
     const matchingAnswer = answers.find(
       (answer) => normalName(answer.name) === normalName(nextName),
     );
+    const keepsEditing = matchingAnswer?.id === editingAnswerId;
 
     setName(nextName);
     setError(null);
+    setNotice(null);
 
-    if (matchingAnswer) {
-      setSelectedDays(matchingAnswer.alwaysFree ? ALL_DAYS : matchingAnswer.dates);
-      setAlwaysFree(matchingAnswer.alwaysFree);
-      setNotice("Risposta trovata. Puoi modificare le tue date.");
+    if (keepsEditing) {
       return;
     }
 
-    if (previousAnswer) {
+    if (matchingAnswer || editingAnswerId) {
       setSelectedDays([]);
       setAlwaysFree(false);
     }
 
+    setEditingAnswerId(null);
+  }
+
+  function editExistingAnswer() {
+    if (!existingAnswer) return;
+
+    setEditingAnswerId(existingAnswer.id);
+    setSelectedDays(existingAnswer.alwaysFree ? ALL_DAYS : existingAnswer.dates);
+    setAlwaysFree(existingAnswer.alwaysFree);
+    setError(null);
+    setNotice("Risposta aperta. Ora puoi modificare le date.");
+  }
+
+  function useDifferentName() {
+    setName("");
+    setEditingAnswerId(null);
+    setSelectedDays([]);
+    setAlwaysFree(false);
+    setError(null);
     setNotice(null);
+    window.requestAnimationFrame(() => nameInputRef.current?.focus());
   }
 
   function toggleDay(day: number) {
@@ -157,12 +193,18 @@ export function CenaPlanner() {
       return;
     }
 
+    if (hasNameConflict) {
+      setError("Questo nome esiste già. Scegli se modificare la risposta o usare un altro nome.");
+      return;
+    }
+
     if (!alwaysFree && selectedDays.length === 0) {
       setError("Scegli almeno una sera, oppure seleziona Sempre libero.");
       return;
     }
 
     try {
+      const wasEditing = isEditingExisting;
       setSaving(true);
       const result = await saveAvailability(answers, {
         name: cleanName,
@@ -171,7 +213,11 @@ export function CenaPlanner() {
       });
       setAnswers(result.answers);
       setShared(result.shared);
-      setNotice(existingAnswer ? "Disponibilità aggiornata." : "Disponibilità salvata.");
+      const savedAnswer = result.answers.find(
+        (answer) => normalName(answer.name) === normalName(cleanName),
+      );
+      setEditingAnswerId(savedAnswer?.id ?? null);
+      setNotice(wasEditing ? "Disponibilità aggiornata." : "Disponibilità salvata.");
     } catch {
       setError("Non siamo riusciti a salvare. Riprova.");
     } finally {
@@ -205,6 +251,7 @@ export function CenaPlanner() {
               <label htmlFor="name">Come ti chiami?</label>
               <input
                 id="name"
+                ref={nameInputRef}
                 name="name"
                 type="text"
                 autoComplete="name"
@@ -212,14 +259,31 @@ export function CenaPlanner() {
                 value={name}
                 onChange={(event) => handleNameChange(event.target.value)}
               />
-              {existingAnswer && (
+              {hasNameConflict && existingAnswer && (
+                <div className="name-conflict" role="alert">
+                  <strong>Questo nome esiste già.</strong>
+                  <p>Scegli un altro nome oppure apri la risposta esistente per modificarla.</p>
+                  <div className="name-conflict-actions">
+                    <button type="button" onClick={editExistingAnswer}>
+                      Modifica la risposta
+                    </button>
+                    <button type="button" onClick={useDifferentName}>
+                      Usa un altro nome
+                    </button>
+                  </div>
+                </div>
+              )}
+              {isEditingExisting && existingAnswer && (
                 <p className="editing-note">
                   Stai modificando la risposta di <strong>{existingAnswer.name}</strong>. Il salvataggio sostituirà quella esistente.
                 </p>
               )}
             </div>
 
-            <fieldset className="calendar-fieldset">
+            <fieldset
+              className={`calendar-fieldset${hasNameConflict ? " is-locked" : ""}`}
+              disabled={hasNameConflict}
+            >
               <legend>Quando sei libero?</legend>
               <div className="month-heading">
                 <span>Settembre 2026</span>
@@ -261,6 +325,7 @@ export function CenaPlanner() {
             <button
               className={`always-button${alwaysFree ? " is-selected" : ""}`}
               type="button"
+              disabled={hasNameConflict}
               aria-pressed={alwaysFree}
               onClick={toggleAlwaysFree}
             >
@@ -272,8 +337,18 @@ export function CenaPlanner() {
             </button>
 
             <div className="form-footer">
-              <button className="submit-button" type="submit" disabled={saving}>
-                {saving ? "Salvataggio…" : existingAnswer ? "Aggiorna" : "Salva disponibilità"}
+              <button
+                className="submit-button"
+                type="submit"
+                disabled={saving || hasNameConflict}
+              >
+                {saving
+                  ? "Salvataggio…"
+                  : hasNameConflict
+                    ? "Nome già usato"
+                    : isEditingExisting
+                      ? "Aggiorna"
+                      : "Salva disponibilità"}
               </button>
               <p className="storage-note">
                 {shared
@@ -320,7 +395,7 @@ export function CenaPlanner() {
                       <strong>{tier.count}/{answers.length}</strong>
                     </div>
                     <div className="overlap-tier-dates">
-                      {tier.days.map((day) => (
+                      {tier.days.map((day, index) => (
                         <button
                           type="button"
                           key={day}
@@ -329,7 +404,7 @@ export function CenaPlanner() {
                           aria-pressed={activeResultDay === day}
                           onClick={() => setSelectedResultDay(day)}
                         >
-                          {day}
+                          {shortDayLabel(day)}{index < tier.days.length - 1 ? "," : ""}
                         </button>
                       ))}
                       <span>settembre</span>
