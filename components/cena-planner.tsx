@@ -350,11 +350,11 @@ export function CenaPlanner() {
                       ? "Aggiorna"
                       : "Salva disponibilità"}
               </button>
-              <p className="storage-note">
-                {shared
-                  ? "Le risposte sono condivise con tutto il gruppo."
-                  : "Archivio condiviso non disponibile: salvataggio solo su questo dispositivo."}
-              </p>
+              {!shared && (
+                <p className="storage-note">
+                  Archivio condiviso non disponibile: salvataggio solo su questo dispositivo.
+                </p>
+              )}
             </div>
 
             <div className="message-slot" aria-live="polite">
