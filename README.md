@@ -1,6 +1,8 @@
 # Fissiamo 'sta cena
 
-Piccola app in italiano per raccogliere le disponibilità serali di settembre 2026 e mostrare le date con più partecipanti.
+Piccola app in italiano per raccogliere le disponibilità serali di settembre 2026 e mostrare le sovrapposizioni su una mappa mensile interattiva.
+
+Ogni nome corrisponde a una sola risposta. Scrivendo di nuovo un nome già presente, le date precedenti vengono caricate e il salvataggio le aggiorna senza creare duplicati.
 
 ## Avvio locale
 

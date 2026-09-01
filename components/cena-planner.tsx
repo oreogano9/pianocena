@@ -20,15 +20,9 @@ const fullDateFormatter = new Intl.DateTimeFormat("it-IT", {
   month: "long",
 });
 
-const shortDateFormatter = new Intl.DateTimeFormat("it-IT", {
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-});
-
-function formatDate(day: number, short = false) {
+function formatDate(day: number) {
   const date = new Date(YEAR, MONTH_INDEX, day);
-  return (short ? shortDateFormatter : fullDateFormatter).format(date);
+  return fullDateFormatter.format(date);
 }
 
 function dayLabel(day: number) {
@@ -68,24 +62,49 @@ export function CenaPlanner() {
     [answers, name],
   );
 
-  const rankedDays = useMemo(() => {
+  const monthDays = useMemo(() => {
     return ALL_DAYS.map((day) => {
       const available = answers.filter(
         (answer) => answer.alwaysFree || answer.dates.includes(day),
       );
 
       return { day, available };
-    })
-      .filter((result) => result.available.length > 0)
-      .sort((a, b) => b.available.length - a.available.length || a.day - b.day);
+    });
   }, [answers]);
 
-  const bestDays = rankedDays.slice(0, 5);
-  const activeResultDay = selectedResultDay ?? bestDays[0]?.day ?? null;
-  const activeResult = rankedDays.find((result) => result.day === activeResultDay);
+  const bestOverlap = Math.max(0, ...monthDays.map((result) => result.available.length));
+  const bestOverlapDays = monthDays.filter(
+    (result) => bestOverlap > 0 && result.available.length === bestOverlap,
+  );
+  const activeResultDay = selectedResultDay ?? bestOverlapDays[0]?.day ?? 1;
+  const activeResult = monthDays.find((result) => result.day === activeResultDay);
   const unavailable = activeResult
     ? answers.filter((answer) => !activeResult.available.some((person) => person.id === answer.id))
     : [];
+
+  function handleNameChange(nextName: string) {
+    const previousAnswer = existingAnswer;
+    const matchingAnswer = answers.find(
+      (answer) => normalName(answer.name) === normalName(nextName),
+    );
+
+    setName(nextName);
+    setError(null);
+
+    if (matchingAnswer) {
+      setSelectedDays(matchingAnswer.alwaysFree ? ALL_DAYS : matchingAnswer.dates);
+      setAlwaysFree(matchingAnswer.alwaysFree);
+      setNotice("Risposta trovata. Puoi modificare le tue date.");
+      return;
+    }
+
+    if (previousAnswer) {
+      setSelectedDays([]);
+      setAlwaysFree(false);
+    }
+
+    setNotice(null);
+  }
 
   function toggleDay(day: number) {
     setNotice(null);
@@ -106,13 +125,6 @@ export function CenaPlanner() {
       setSelectedDays(next ? ALL_DAYS : []);
       return next;
     });
-  }
-
-  function loadExistingAnswer() {
-    if (!existingAnswer) return;
-    setSelectedDays(existingAnswer.alwaysFree ? ALL_DAYS : existingAnswer.dates);
-    setAlwaysFree(existingAnswer.alwaysFree);
-    setNotice("Ho caricato la tua risposta precedente.");
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -175,16 +187,12 @@ export function CenaPlanner() {
                 autoComplete="name"
                 placeholder="Scrivi il tuo nome"
                 value={name}
-                onChange={(event) => {
-                  setName(event.target.value);
-                  setNotice(null);
-                  setError(null);
-                }}
+                onChange={(event) => handleNameChange(event.target.value)}
               />
               {existingAnswer && (
-                <button className="restore-button" type="button" onClick={loadExistingAnswer}>
-                  Hai già risposto. Carica le tue date
-                </button>
+                <p className="editing-note">
+                  Stai modificando la risposta di <strong>{existingAnswer.name}</strong>. Il salvataggio sostituirà quella esistente.
+                </p>
               )}
             </div>
 
@@ -256,10 +264,14 @@ export function CenaPlanner() {
       <section className="results" id="risultati">
         <div className="results-heading">
           <div>
-            <h2>Le date migliori</h2>
+            <h2>Mappa del mese</h2>
             <p>{answers.length === 1 ? "1 persona ha risposto" : `${answers.length} persone hanno risposto`}</p>
           </div>
-          <p className="results-note">Più persone ci sono, più la data sale.</p>
+          <p className="results-note">
+            {bestOverlap > 0
+              ? `Migliore sovrapposizione: ${bestOverlap} su ${answers.length}`
+              : "Le sovrapposizioni appariranno qui."}
+          </p>
         </div>
 
         {!ready ? (
@@ -268,35 +280,52 @@ export function CenaPlanner() {
             <span />
             <span />
           </div>
-        ) : bestDays.length === 0 ? (
-          <div className="empty-state">
-            <p>Nessuna risposta, per ora.</p>
-            <span>Compila il modulo e rompi il ghiaccio.</span>
-          </div>
         ) : (
-          <div className="results-grid">
-            <div className="ranking">
-              {bestDays.map((result, index) => (
-                <button
-                  type="button"
-                  key={result.day}
-                  className={`ranking-row${activeResultDay === result.day ? " is-active" : ""}`}
-                  onClick={() => setSelectedResultDay(result.day)}
-                  aria-pressed={activeResultDay === result.day}
-                >
-                  <span className="rank">{String(index + 1).padStart(2, "0")}</span>
-                  <span className="rank-date">{formatDate(result.day, true)}</span>
-                  <span className="rank-count">{result.available.length}</span>
-                </button>
+          <div className="month-results-grid">
+            <div className="month-map" role="group" aria-label="Disponibilità del gruppo a settembre 2026">
+              {WEEKDAYS.map((weekday, index) => (
+                <span className="month-map-weekday" key={`map-${weekday}-${index}`} aria-hidden="true">
+                  {weekday}
+                </span>
               ))}
+              {Array.from({ length: FIRST_DAY_OFFSET }, (_, index) => (
+                <span className="month-map-spacer" key={`map-spacer-${index}`} aria-hidden="true" />
+              ))}
+              {monthDays.map((result) => {
+                const names = result.available.map((person) => person.name);
+                const isBest = bestOverlap > 0 && result.available.length === bestOverlap;
+                const isActive = activeResultDay === result.day;
+
+                return (
+                  <button
+                    type="button"
+                    key={result.day}
+                    className={`month-map-day${isBest ? " is-best" : ""}${isActive ? " is-active" : ""}`}
+                    aria-label={`${dayLabel(result.day)}. ${result.available.length} su ${answers.length} disponibili${names.length > 0 ? `: ${names.join(", ")}` : ". Nessuno"}`}
+                    aria-pressed={isActive}
+                    onClick={() => setSelectedResultDay(result.day)}
+                  >
+                    <span className="month-map-day-top">
+                      <strong>{result.day}</strong>
+                      <span>{result.available.length}/{answers.length}</span>
+                    </span>
+                    <span className="month-map-names">
+                      {names.length > 0 ? names.join(", ") : "Nessuno"}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {activeResult && (
               <aside className="day-detail" aria-live="polite">
+                {bestOverlap > 0 && activeResult.available.length === bestOverlap && (
+                  <p className="best-overlap-label">Migliore sovrapposizione</p>
+                )}
                 <p className="detail-date">{dayLabel(activeResult.day)}</p>
                 <div className="people-group">
                   <h3>Ci sono</h3>
-                  <p>{activeResult.available.map((person) => person.name).join(", ")}</p>
+                  <p>{activeResult.available.length > 0 ? activeResult.available.map((person) => person.name).join(", ") : "Nessuno"}</p>
                 </div>
                 <div className="people-group is-muted">
                   <h3>Non ci sono</h3>
