@@ -4,6 +4,10 @@ Piccola app in italiano per raccogliere le disponibilità serali, mese per mese,
 
 Ogni mese usa un archivio separato. Ogni nome corrisponde a una sola risposta nel mese selezionato; se il nome esiste già, l'interfaccia chiede di aprire esplicitamente la risposta prima di modificarla.
 
+## Anteprima organizzazione
+
+Il piano automatico per una o due cene è visibile solo quando viene scritto `Konrad` nel campo del nome. Per renderlo visibile a tutti, imposta `SHOW_MEETING_PLAN_TO_EVERYONE` su `true` in `components/cena-planner.tsx`.
+
 ## Avvio locale
 
 ```bash

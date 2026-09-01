@@ -553,6 +553,156 @@ a:focus-visible {
   text-align: right;
 }
 
+.meeting-plan {
+  max-width: 1320px;
+  margin: 0 auto clamp(2.5rem, 5vw, 4.5rem);
+  border: 1px solid var(--line-strong);
+}
+
+.meeting-plan-heading {
+  padding: clamp(1rem, 2vw, 1.5rem);
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.meeting-plan-heading p,
+.meeting-plan-heading h3 {
+  margin: 0;
+}
+
+.meeting-plan-heading p,
+.meeting-plan-group-number,
+.meeting-plan-summary span {
+  color: var(--muted);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.meeting-plan-heading h3 {
+  margin-top: 0.55rem;
+  font-size: clamp(1.65rem, 3vw, 2.6rem);
+  font-weight: 590;
+  letter-spacing: -0.045em;
+}
+
+.meeting-plan-heading > strong {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: clamp(1.15rem, 2vw, 1.6rem);
+}
+
+.meeting-plan-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--line-strong);
+}
+
+.meeting-plan-groups.is-1 {
+  grid-template-columns: 1fr;
+}
+
+.meeting-plan-group {
+  min-width: 0;
+  min-height: 12rem;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1.5rem;
+  border: 0;
+  border-right: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 130ms ease, color 130ms ease, transform 80ms ease;
+}
+
+.meeting-plan-group:last-child {
+  border-right: 0;
+}
+
+.meeting-plan-group:first-child {
+  background: var(--text);
+  color: var(--background);
+}
+
+.meeting-plan-group:first-child .meeting-plan-group-number {
+  color: #555552;
+}
+
+.meeting-plan-group:hover {
+  background: var(--surface-strong);
+  color: var(--text);
+}
+
+.meeting-plan-group:active {
+  transform: translateY(1px);
+}
+
+.meeting-plan-group:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid var(--text);
+  outline-offset: -4px;
+}
+
+.meeting-plan-group-date {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: clamp(2rem, 4vw, 3.8rem);
+  font-weight: 610;
+  letter-spacing: -0.06em;
+  line-height: 0.95;
+}
+
+.meeting-plan-group-date strong {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.meeting-plan-group-names {
+  margin-top: auto;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.meeting-plan-group:first-child .meeting-plan-group-names {
+  color: #444441;
+}
+
+.meeting-plan-group:first-child:hover .meeting-plan-group-names {
+  color: var(--muted);
+}
+
+.meeting-plan-summary {
+  padding: clamp(1rem, 2vw, 1.5rem);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1.25rem, 3vw, 3rem);
+  border-top: 1px solid var(--line-strong);
+}
+
+.meeting-plan-summary p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.meeting-plan-summary span {
+  margin-bottom: 0.45rem;
+  display: block;
+}
+
 .overlap-tiers {
   max-width: 1320px;
   margin: 0 auto clamp(2.5rem, 5vw, 4.5rem);
@@ -732,6 +882,23 @@ a:focus-visible {
   box-shadow: inset 0 0 0 3px currentColor;
 }
 
+.month-map-day.is-plan-1 {
+  background: var(--text);
+  color: var(--background);
+  box-shadow: inset 0 0 0 3px var(--text);
+}
+
+.month-map-day.is-plan-2 {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: inset 0 0 0 3px var(--text);
+}
+
+.month-map-day.is-plan-1.is-active,
+.month-map-day.is-plan-2.is-active {
+  box-shadow: inset 0 0 0 5px currentColor;
+}
+
 .month-map-day-top {
   display: flex;
   align-items: baseline;
@@ -776,6 +943,17 @@ a:focus-visible {
 
 .month-map-day.is-tier-3 .month-map-names {
   color: rgb(245 245 242 / 0.72);
+}
+
+.month-map-plan-label {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.45rem;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.55rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .day-detail {
@@ -949,6 +1127,29 @@ footer a {
 
   .overlap-tiers {
     grid-template-columns: 1fr;
+  }
+
+  .meeting-plan-heading {
+    align-items: start;
+  }
+
+  .meeting-plan-groups,
+  .meeting-plan-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .meeting-plan-group {
+    min-height: 10rem;
+    border-right: 0;
+    border-bottom: 1px solid var(--line-strong);
+  }
+
+  .meeting-plan-group:last-child {
+    border-bottom: 0;
+  }
+
+  .meeting-plan-group-date {
+    font-size: clamp(2rem, 12vw, 3.25rem);
   }
 
   .overlap-tier {

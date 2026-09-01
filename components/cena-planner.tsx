@@ -12,7 +12,22 @@ import {
 } from "@/lib/months";
 
 const MIN_ANSWERS_FOR_RANKING = 3;
+// Change this to true when the meeting-plan preview is ready for the whole group.
+const SHOW_MEETING_PLAN_TO_EVERYONE = false;
+const MEETING_PLAN_PREVIEW_NAME = "Konrad";
 const WEEKDAYS = ["L", "M", "M", "G", "V", "S", "D"];
+
+type MeetingGroup = {
+  day: number;
+  members: Availability[];
+};
+
+type MeetingPlan = {
+  groups: MeetingGroup[];
+  flexible: Availability[];
+  coveredCount: number;
+  uncovered: Availability[];
+};
 
 const fullDateFormatter = new Intl.DateTimeFormat("it-IT", {
   weekday: "long",
@@ -54,6 +69,97 @@ function shortDayLabel(year: number, monthIndex: number, day: number) {
 
 function normalName(name: string) {
   return name.trim().toLocaleLowerCase("it");
+}
+
+function isAvailableOn(answer: Availability, day: number) {
+  return answer.alwaysFree || answer.dates.includes(day);
+}
+
+function assignPair(answers: Availability[], firstDay: number, secondDay: number) {
+  const firstMembers = answers.filter(
+    (answer) => isAvailableOn(answer, firstDay) && !isAvailableOn(answer, secondDay),
+  );
+  const secondMembers = answers.filter(
+    (answer) => isAvailableOn(answer, secondDay) && !isAvailableOn(answer, firstDay),
+  );
+  const flexible = answers.filter(
+    (answer) => isAvailableOn(answer, firstDay) && isAvailableOn(answer, secondDay),
+  );
+
+  flexible.forEach((answer) => {
+    if (firstMembers.length <= secondMembers.length) {
+      firstMembers.push(answer);
+    } else {
+      secondMembers.push(answer);
+    }
+  });
+
+  const coveredIds = new Set([
+    ...firstMembers.map((answer) => answer.id),
+    ...secondMembers.map((answer) => answer.id),
+  ]);
+
+  return {
+    groups: [
+      { day: firstDay, members: firstMembers },
+      { day: secondDay, members: secondMembers },
+    ],
+    flexible,
+    coveredCount: coveredIds.size,
+    uncovered: answers.filter((answer) => !coveredIds.has(answer.id)),
+  } satisfies MeetingPlan;
+}
+
+function findBestMeetingPlan(
+  answers: Availability[],
+  monthDays: { day: number; available: Availability[] }[],
+): MeetingPlan | null {
+  const candidates = monthDays.filter((result) => result.available.length > 0);
+  if (candidates.length === 0) return null;
+
+  const bestSingle = [...candidates].sort(
+    (first, second) =>
+      second.available.length - first.available.length || first.day - second.day,
+  )[0];
+  const singleIds = new Set(bestSingle.available.map((answer) => answer.id));
+  const singlePlan: MeetingPlan = {
+    groups: [{ day: bestSingle.day, members: bestSingle.available }],
+    flexible: [],
+    coveredCount: singleIds.size,
+    uncovered: answers.filter((answer) => !singleIds.has(answer.id)),
+  };
+
+  let bestPair: MeetingPlan | null = null;
+  let bestPairBalance = -1;
+  let bestPairAttendance = -1;
+
+  for (let firstIndex = 0; firstIndex < candidates.length; firstIndex += 1) {
+    for (let secondIndex = firstIndex + 1; secondIndex < candidates.length; secondIndex += 1) {
+      const first = candidates[firstIndex];
+      const second = candidates[secondIndex];
+      const pair = assignPair(answers, first.day, second.day);
+      const balance = Math.min(...pair.groups.map((group) => group.members.length));
+      const attendance = first.available.length + second.available.length;
+      const beatsCurrent =
+        !bestPair ||
+        pair.coveredCount > bestPair.coveredCount ||
+        (pair.coveredCount === bestPair.coveredCount && balance > bestPairBalance) ||
+        (pair.coveredCount === bestPair.coveredCount &&
+          balance === bestPairBalance &&
+          attendance > bestPairAttendance);
+
+      if (beatsCurrent) {
+        bestPair = pair;
+        bestPairBalance = balance;
+        bestPairAttendance = attendance;
+      }
+    }
+  }
+
+  const minimumUsefulGain = Math.max(2, Math.ceil(answers.length * 0.1));
+  return bestPair && bestPair.coveredCount - singlePlan.coveredCount >= minimumUsefulGain
+    ? bestPair
+    : singlePlan;
 }
 
 export function CenaPlanner({ initialMonth }: { initialMonth: string }) {
@@ -147,6 +253,16 @@ export function CenaPlanner({ initialMonth }: { initialMonth: string }) {
   }, [monthDays, rankingReady]);
 
   const bestOverlap = overlapTiers[0]?.count ?? 0;
+  const meetingPlan = useMemo(
+    () => (rankingReady ? findBestMeetingPlan(answers, monthDays) : null),
+    [answers, monthDays, rankingReady],
+  );
+  const meetingPlanVisible =
+    SHOW_MEETING_PLAN_TO_EVERYONE ||
+    normalName(name) === normalName(MEETING_PLAN_PREVIEW_NAME);
+  const recommendedDayIndexes = new Map(
+    meetingPlan?.groups.map((group, index) => [group.day, index + 1]) ?? [],
+  );
   const bestOverlapDays = monthDays.filter(
     (result) => bestOverlap > 0 && result.available.length === bestOverlap,
   );
@@ -468,6 +584,61 @@ export function CenaPlanner({ initialMonth }: { initialMonth: string }) {
           </div>
         ) : (
           <>
+            {meetingPlanVisible && meetingPlan && (
+              <section className="meeting-plan" aria-labelledby="meeting-plan-title">
+                <div className="meeting-plan-heading">
+                  <div>
+                    <p>Miglior organizzazione</p>
+                    <h3 id="meeting-plan-title">
+                      {meetingPlan.groups.length === 1
+                        ? "Una cena consigliata"
+                        : `${meetingPlan.groups.length} cene consigliate`}
+                    </h3>
+                  </div>
+                  <strong>{meetingPlan.coveredCount}/{answers.length}</strong>
+                </div>
+
+                <div className={`meeting-plan-groups is-${meetingPlan.groups.length}`}>
+                  {meetingPlan.groups.map((group, index) => (
+                    <button
+                      type="button"
+                      className="meeting-plan-group"
+                      key={group.day}
+                      aria-label={`Mostra la cena ${index + 1}, ${dayLabel(year, monthIndex, group.day)}, ${group.members.length} persone`}
+                      onClick={() => setSelectedResultDay(group.day)}
+                    >
+                      <span className="meeting-plan-group-number">Cena {index + 1}</span>
+                      <span className="meeting-plan-group-date">
+                        {shortDayLabel(year, monthIndex, group.day)}
+                        <strong>{group.members.length} persone</strong>
+                      </span>
+                      <span className="meeting-plan-group-names">
+                        {group.members.map((person) => person.name).join(", ")}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="meeting-plan-summary">
+                  <p>
+                    <strong>{meetingPlan.coveredCount}/{answers.length}</strong> persone hanno almeno una cena
+                  </p>
+                  {meetingPlan.flexible.length > 0 && (
+                    <p>
+                      <span>Disponibili entrambe le date</span>
+                      {meetingPlan.flexible.map((person) => person.name).join(", ")}
+                    </p>
+                  )}
+                  {meetingPlan.uncovered.length > 0 && (
+                    <p>
+                      <span>Restano fuori</span>
+                      {meetingPlan.uncovered.map((person) => person.name).join(", ")}
+                    </p>
+                  )}
+                </div>
+              </section>
+            )}
+
             {overlapTiers.length > 0 && (
               <ol className="overlap-tiers" aria-label="Classifica delle date con più disponibilità">
                 {overlapTiers.map((tier) => (
@@ -513,12 +684,15 @@ export function CenaPlanner({ initialMonth }: { initialMonth: string }) {
                 )?.rank;
                 const isActive = activeResultDay === result.day;
                 const isToday = result.day === currentDay;
+                const recommendedIndex = meetingPlanVisible
+                  ? recommendedDayIndexes.get(result.day)
+                  : undefined;
 
                 return (
                   <button
                     type="button"
                     key={result.day}
-                    className={`month-map-day${tierRank ? ` is-tier-${tierRank}` : ""}${isActive ? " is-active" : ""}`}
+                    className={`month-map-day${tierRank ? ` is-tier-${tierRank}` : ""}${recommendedIndex ? ` is-plan-${recommendedIndex}` : ""}${isActive ? " is-active" : ""}`}
                     aria-label={`${dayLabel(year, monthIndex, result.day)}${isToday ? ", oggi" : ""}. ${result.available.length} su ${answers.length} disponibili${names.length > 0 ? `: ${names.join(", ")}` : ". Nessuno"}`}
                     aria-pressed={isActive}
                     onClick={() => setSelectedResultDay(result.day)}
@@ -530,6 +704,11 @@ export function CenaPlanner({ initialMonth }: { initialMonth: string }) {
                     <span className="month-map-names">
                       {names.length > 0 ? names.join(", ") : "Nessuno"}
                     </span>
+                    {recommendedIndex && (
+                      <span className="month-map-plan-label" aria-hidden="true">
+                        Cena {recommendedIndex}
+                      </span>
+                    )}
                     {isToday && <span className="current-day-dot" aria-hidden="true" />}
                   </button>
                 );
