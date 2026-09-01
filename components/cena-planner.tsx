@@ -7,6 +7,7 @@ import type { Availability } from "@/lib/availability-store";
 const YEAR = 2026;
 const MONTH_INDEX = 8;
 const DAYS_IN_MONTH = 30;
+const MIN_ANSWERS_FOR_RANKING = 5;
 const ALL_DAYS = Array.from({ length: DAYS_IN_MONTH }, (_, index) => index + 1);
 const WEEKDAYS = ["L", "M", "M", "G", "V", "S", "D"];
 const FIRST_DAY_OFFSET = 1;
@@ -94,7 +95,10 @@ export function CenaPlanner() {
     });
   }, [answers]);
 
+  const rankingReady = answers.length >= MIN_ANSWERS_FOR_RANKING;
   const overlapTiers = useMemo(() => {
+    if (!rankingReady) return [];
+
     const topCounts = [...new Set(monthDays.map((result) => result.available.length))]
       .filter((count) => count > 0)
       .sort((a, b) => b - a)
@@ -107,7 +111,7 @@ export function CenaPlanner() {
         .filter((result) => result.available.length === count)
         .map((result) => result.day),
     }));
-  }, [monthDays]);
+  }, [monthDays, rankingReady]);
 
   const bestOverlap = overlapTiers[0]?.count ?? 0;
   const bestOverlapDays = monthDays.filter(
@@ -372,7 +376,9 @@ export function CenaPlanner() {
             <p>{answers.length === 1 ? "1 persona ha risposto" : `${answers.length} persone hanno risposto`}</p>
           </div>
           <p className="results-note">
-            {bestOverlap > 0
+            {!rankingReady
+              ? `La classifica apparirà dopo ${MIN_ANSWERS_FOR_RANKING} risposte.`
+              : bestOverlap > 0
               ? `Migliore sovrapposizione: ${bestOverlap} su ${answers.length}`
               : "Le sovrapposizioni appariranno qui."}
           </p>
