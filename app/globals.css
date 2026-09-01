@@ -566,8 +566,7 @@ a:focus-visible {
   gap: 2rem;
 }
 
-.meeting-plan-heading h3,
-.meeting-plan-heading p {
+.meeting-plan-heading h3 {
   margin: 0;
 }
 
@@ -583,12 +582,6 @@ a:focus-visible {
   font-size: clamp(1.65rem, 3vw, 2.6rem);
   font-weight: 590;
   letter-spacing: -0.045em;
-}
-
-.meeting-plan-heading p {
-  margin-top: 0.5rem;
-  color: var(--muted);
-  font-size: 0.82rem;
 }
 
 .meeting-plan-heading > strong {
@@ -613,8 +606,7 @@ a:focus-visible {
   gap: 2rem;
 }
 
-.meeting-group-heading h4,
-.meeting-group-heading p {
+.meeting-group-heading h4 {
   margin: 0;
 }
 
@@ -622,14 +614,6 @@ a:focus-visible {
   font-size: clamp(1.35rem, 2.5vw, 2rem);
   font-weight: 590;
   letter-spacing: -0.045em;
-}
-
-.meeting-group-heading p {
-  max-width: 75ch;
-  margin-top: 0.45rem;
-  color: var(--muted);
-  font-size: 0.78rem;
-  line-height: 1.45;
 }
 
 .meeting-group-heading > strong {

@@ -6,7 +6,7 @@ Ogni mese usa un archivio separato. Ogni nome corrisponde a una sola risposta ne
 
 ## Anteprima organizzazione
 
-Il piano automatico propone due gruppi e aggiunge un terzo solo quando migliora la copertura. Ogni gruppo ha il proprio podio con tre date distinte, il totale reale e tutti i nomi disponibili. L'anteprima è visibile solo quando viene scritto `Konrad` nel campo del nome. Per renderla visibile a tutti, imposta `SHOW_MEETING_PLAN_TO_EVERYONE` su `true` in `components/cena-planner.tsx`.
+Il piano automatico propone due gruppi e aggiunge un terzo solo quando migliora la copertura. I gruppi possono sovrapporsi quando una persona è libera per più cene. Ogni gruppo ha il proprio podio con tre date distinte, il totale reale e tutti i nomi disponibili. L'anteprima è visibile solo quando viene scritto `Konrad` nel campo del nome. Per renderla visibile a tutti, imposta `SHOW_MEETING_PLAN_TO_EVERYONE` su `true` in `components/cena-planner.tsx`.
 
 ## Avvio locale
 

@@ -117,21 +117,16 @@ function isAvailableOn(answer: Availability, day: number) {
 }
 
 function assignDates(answers: Availability[], days: number[]) {
-  const groups = days.map((day) => ({ day, members: [] as Availability[] }));
-  const flexible: Availability[] = [];
-  const coveredIds = new Set<string>();
-
-  answers.forEach((answer) => {
-    const availableGroups = groups.filter((group) => isAvailableOn(answer, group.day));
-    if (availableGroups.length === 0) return;
-
-    if (availableGroups.length > 1) flexible.push(answer);
-    const assignedGroup = availableGroups.reduce((smallest, group) =>
-      group.members.length < smallest.members.length ? group : smallest,
-    );
-    assignedGroup.members.push(answer);
-    coveredIds.add(answer.id);
-  });
+  const groups = days.map((day) => ({
+    day,
+    members: answers.filter((answer) => isAvailableOn(answer, day)),
+  }));
+  const flexible = answers.filter(
+    (answer) => groups.filter((group) => isAvailableOn(answer, group.day)).length > 1,
+  );
+  const coveredIds = new Set(
+    groups.flatMap((group) => group.members.map((answer) => answer.id)),
+  );
 
   return {
     groups,
@@ -648,7 +643,6 @@ export function CenaPlanner({ initialMonth }: { initialMonth: string }) {
                         ? "1 cena consigliata"
                         : `${meetingPlan.groups.length} cene consigliate`}
                     </h3>
-                    <p>Il miglior mix di date per includere tutto il gruppo.</p>
                   </div>
                   <strong>{meetingPlan.coveredCount}/{answers.length}</strong>
                 </div>
@@ -657,10 +651,7 @@ export function CenaPlanner({ initialMonth }: { initialMonth: string }) {
                   {meetingGroupRankings.map((group, groupIndex) => (
                     <section className="meeting-group-ranking" key={group.day}>
                       <div className="meeting-group-heading">
-                        <div>
-                          <h4>Cena {String.fromCharCode(65 + groupIndex)}</h4>
-                          <p>{group.members.map((person) => person.name).join(", ")}</p>
-                        </div>
+                        <h4>Cena {String.fromCharCode(65 + groupIndex)}</h4>
                         <strong>{group.members.length} persone</strong>
                       </div>
 
@@ -690,7 +681,9 @@ export function CenaPlanner({ initialMonth }: { initialMonth: string }) {
                                 <span>{monthName}</span>
                               </div>
                               <p className="group-podium-people">
-                                <span>{position.groupCount}/{group.members.length} del gruppo</span>
+                                <span>
+                                  {position.groupCount}/{group.members.length} di Cena {String.fromCharCode(65 + groupIndex)}
+                                </span>
                                 {names.join(", ")}
                               </p>
                             </li>
