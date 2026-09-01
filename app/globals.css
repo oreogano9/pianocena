@@ -278,6 +278,11 @@ a:focus-visible {
   transform: translateY(1px);
 }
 
+.submit-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .day-button.is-selected {
   background: var(--text);
   color: var(--background);

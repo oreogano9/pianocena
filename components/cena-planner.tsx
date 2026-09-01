@@ -1,11 +1,8 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import {
-  Availability,
-  loadAvailabilities,
-  saveAvailability,
-} from "@/lib/availability-store";
+import { loadAvailabilities, saveAvailability } from "@/lib/availability-store";
+import type { Availability } from "@/lib/availability-store";
 
 const YEAR = 2026;
 const MONTH_INDEX = 8;
@@ -45,11 +42,15 @@ export function CenaPlanner() {
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [shared, setShared] = useState(true);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
+    const timer = window.setTimeout(async () => {
       try {
-        setAnswers(loadAvailabilities());
+        const result = await loadAvailabilities();
+        setAnswers(result.answers);
+        setShared(result.shared);
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Qualcosa è andato storto.");
       } finally {
@@ -130,7 +131,7 @@ export function CenaPlanner() {
     });
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setNotice(null);
     setError(null);
@@ -147,15 +148,19 @@ export function CenaPlanner() {
     }
 
     try {
-      const next = saveAvailability(answers, {
+      setSaving(true);
+      const result = await saveAvailability(answers, {
         name: cleanName,
         dates: alwaysFree ? ALL_DAYS : selectedDays,
         alwaysFree,
       });
-      setAnswers(next);
+      setAnswers(result.answers);
+      setShared(result.shared);
       setNotice(existingAnswer ? "Disponibilità aggiornata." : "Disponibilità salvata.");
     } catch {
       setError("Non siamo riusciti a salvare. Riprova.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -252,10 +257,14 @@ export function CenaPlanner() {
             </button>
 
             <div className="form-footer">
-              <button className="submit-button" type="submit">
-                {existingAnswer ? "Aggiorna" : "Salva disponibilità"}
+              <button className="submit-button" type="submit" disabled={saving}>
+                {saving ? "Salvataggio…" : existingAnswer ? "Aggiorna" : "Salva disponibilità"}
               </button>
-              <p className="storage-note">Per ora, i dati restano su questo dispositivo.</p>
+              <p className="storage-note">
+                {shared
+                  ? "Le risposte sono condivise con tutto il gruppo."
+                  : "Archivio condiviso non disponibile: salvataggio solo su questo dispositivo."}
+              </p>
             </div>
 
             <div className="message-slot" aria-live="polite">
